@@ -1,0 +1,117 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: build-and-deploy-vote-app
+spec:
+  workspaces:
+  - name: dockerconfig-workspace
+  - name: shared-vote-app-ui-workspace
+  - name: shared-vote-app-api-workspace
+  - name: azure-repo-credentials-workspace
+  params:
+  - name: api-git-url
+    type: string
+    description: url of the git api repo for the code of deployment
+  - name: ui-git-url
+    type: string
+    description: url of the git ui repo for the code of deployment
+  - name: git-revision
+    type: string
+    description: revision to be used from repo of the code for deployment
+    default: "master"
+  - name: UI-IMAGE
+    type: string
+    description: ui image to be built from the code
+  - name: API-IMAGE
+    type: string
+    description: api image to be built from the code
+  tasks:
+  - name: clone-vote-ui
+    taskRef:
+      name: git-clone
+      kind: ClusterTask
+    workspaces:
+    - name: output
+      workspace: shared-vote-app-ui-workspace
+    - name: ssh-directory
+      workspace: azure-repo-credentials-workspace
+    params:
+    - name: url
+      value: $(params.ui-git-url)
+    - name: subdirectory
+      value: ""
+    - name: deleteExisting
+      value: "true"
+    - name: revision
+      value: $(params.git-revision)
+  - name: clone-vote-api
+    taskRef:
+      name: git-clone
+      kind: ClusterTask
+    workspaces:
+    - name: output
+      workspace: shared-vote-app-ui-workspace
+    - name: ssh-directory
+      workspace: azure-repo-credentials-workspace
+    params:
+    - name: url
+      value: $(params.api-git-url)
+    - name: subdirectory
+      value: ""
+    - name: deleteExisting
+      value: "true"
+    - name: revision
+      value: $(params.git-revision)
+    runAfter:
+      - clone-vote-ui
+  - name: build-and-push-vote-api-image
+    taskRef:
+      name: buildah
+      kind: ClusterTask
+    params:
+    - name: IMAGE
+      value: $(params.API-IMAGE)
+    workspaces:
+    - name: source
+      workspace: shared-vote-app-api-workspace
+    - name: dockerconfig
+      workspace: dockerconfig-workspace
+    runAfter:
+    - clone-vote-api
+  - name: build-and-push-vote-ui-image
+    taskRef:
+      name: buildah
+      kind: ClusterTask
+    params:
+    - name: IMAGE
+      value: $(params.UI-IMAGE)
+    workspaces:
+    - name: source
+      workspace: shared-vote-app-ui-workspace
+    - name: dockerconfig
+      workspace: dockerconfig-workspace
+    runAfter:
+    - clone-vote-api
+  - name: deploy-flux-vote-ui
+    taskRef:
+      name: apply-manifests
+    workspaces:
+    - name: source
+      workspace: shared-vote-app-ui-workspace
+    params:
+    - name: flux_manifests
+      value: vote-app-ui-flux-dev
+    runAfter:
+    - build-and-push-vote-api-image
+    - build-and-push-vote-ui-image
+  - name: deploy-flux-vote-api
+    taskRef:
+      name: apply-manifests
+    workspaces:
+    - name: source
+      workspace: shared-vote-app-api-workspace
+    params:
+    - name: flux_manifests
+      value: vote-app-api-flux-dev
+    runAfter:
+    - deploy-flux-vote-ui
