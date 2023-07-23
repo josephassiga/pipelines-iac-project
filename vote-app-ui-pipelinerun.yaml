@@ -1,0 +1,29 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: vote-app-ui
+spec:
+  pipelineRef:
+    name: build-and-deploy
+  params:
+    - name: git-url
+      value: git@ssh.dev.azure.com:v3/josephassiga/migration-factory/pipelines-vote-ui
+    - name: IMAGE
+      value: josephassiga/vote-app-ui
+    - name: deployment-name
+      value: vote-app-ui
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: '500Mi'
+    - name: azure-repo-credentials-workspace
+      secret:
+        secretName: git-credentials
+    - name: dockerconfig-workspace
+      secret:
+        secretName: docker-credentials
