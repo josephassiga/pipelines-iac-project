@@ -50,7 +50,7 @@ spec:
       kind: ClusterTask
     workspaces:
     - name: output
-      workspace: shared-vote-app-ui-workspace
+      workspace: shared-vote-app-api-workspace
     - name: ssh-directory
       workspace: azure-repo-credentials-workspace
     params:
@@ -98,9 +98,6 @@ spec:
     workspaces:
     - name: source
       workspace: shared-vote-app-ui-workspace
-    params:
-    - name: flux_manifests
-      value: vote-app-ui-flux-dev
     runAfter:
     - build-and-push-vote-api-image
     - build-and-push-vote-ui-image
@@ -110,8 +107,5 @@ spec:
     workspaces:
     - name: source
       workspace: shared-vote-app-api-workspace
-    params:
-    - name: flux_manifests
-      value: vote-app-api-flux-dev
     runAfter:
     - deploy-flux-vote-ui

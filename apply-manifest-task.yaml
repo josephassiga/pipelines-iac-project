@@ -6,9 +6,10 @@ spec:
   workspaces:
   - name: source
   params:
-    - name: flux_manifests
-      description: This file contains GitRepository and Kustomization flux ressources.
+    - name: iac_dir
+      description: This directory contains GitRepository and Kustomization flux ressources.
       type: string
+      default: "iac"
   steps:
     - name: apply
       image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
@@ -17,5 +18,5 @@ spec:
       args:
         - |-
           echo Applying manifests in $(inputs.params.flux_manifests) directory
-          oc apply -f $(inputs.params.flux_manifests).yaml
+          oc apply -f $(inputs.params.iac_dir)
           echo -----------------------------------
